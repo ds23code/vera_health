@@ -1,7 +1,6 @@
 // App.tsx
-import React, { useMemo } from "react";
+import React, { useMemo, useRef } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   TextInput,
@@ -14,14 +13,16 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import Collapsible from "./components/Collapsible";
 import MarkdownView from "./components/MarkdownView";
 import SearchSteps from "./components/SearchSteps";
 import { useAIStream } from "./hooks/useAIStream";
 
 export default function App() {
-  const { question, setQuestion, sections, search, isStreaming, error, start, stop, reset } = useAIStream();
+  const { question, setQuestion, sections, search, isStreaming, error, start, stop, reset, debug } = useAIStream();
   const canAsk = useMemo(() => question.trim().length > 0 && !isStreaming, [question, isStreaming]);
+  const scrollRef = useRef<ScrollView>(null);
 
   const onSubmit = () => {
     const q = question.trim();
@@ -30,73 +31,107 @@ export default function App() {
   };
 
   return (
-    <LinearGradient colors={["#f8fbff", "#eef2f7"]} style={{ flex: 1 }}>
-      <SafeAreaView style={{ flex: 1 }}>
-        <StatusBar style="dark" />
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View style={styles.headerWrap}>
-            <Text style={styles.title}>Clinical Q&A</Text>
-            <Text style={styles.subtitle}>Streaming answers with structured sections</Text>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.label}>Your question</Text>
-            <TextInput
-              placeholder="Type a precise clinical question…"
-              placeholderTextColor="#94a3b8"
-              value={question}
-              onChangeText={setQuestion}
-              editable={!isStreaming}
-              style={styles.input}
-              multiline
-            />
-            <View style={styles.actions}>
-              {!isStreaming ? (
-                <Pressable
-                  style={[styles.button, canAsk ? styles.buttonPrimary : styles.buttonDisabled]}
-                  onPress={onSubmit}
-                  disabled={!canAsk}
-                >
-                  <Text style={styles.buttonText}>Ask</Text>
-                </Pressable>
-              ) : (
-                <Pressable style={[styles.button, styles.buttonDanger]} onPress={stop}>
-                  <Text style={styles.buttonText}>Stop</Text>
-                </Pressable>
-              )}
-              <Pressable style={[styles.button, styles.buttonGhost]} onPress={reset} disabled={isStreaming}>
-                <Text style={[styles.buttonGhostText]}>Clear</Text>
-              </Pressable>
+    <SafeAreaProvider>
+      <LinearGradient colors={["#f8fbff", "#eef2f7"]} style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <StatusBar style="dark" />
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+            <View style={styles.headerWrap}>
+              <Text style={styles.title}>Clinical Q&A</Text>
+              <Text style={styles.subtitle}>Streaming answers with structured sections</Text>
             </View>
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-          </View>
 
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
-            <SearchSteps steps={search.steps} progress={search.progress} visible={search.steps.length > 0} />
-
-            {question.trim() ? (
-              <Collapsible
-                title="Answer"
-                defaultOpen
-                rightAccessory={isStreaming ? <ActivityIndicator size="small" color="#2563eb" /> : null}
-              >
-                {sections.map((section) => (
-                  <Collapsible key={section.id} title={section.title} defaultOpen>
-                    <MarkdownView>{section.content}</MarkdownView>
-                  </Collapsible>
-                ))}
-              </Collapsible>
-            ) : (
-              <View style={styles.hint}>
-                <Text style={styles.hintText}>
-                  Ask a clinical question to start streaming an AI response.
-                </Text>
+            <View style={styles.card}>
+              <Text style={styles.label}>Your question</Text>
+              <TextInput
+                placeholder="Type a precise clinical question…"
+                placeholderTextColor="#94a3b8"
+                value={question}
+                onChangeText={setQuestion}
+                editable={!isStreaming}
+                style={styles.input}
+                multiline
+              />
+              <View style={styles.actions}>
+                {!isStreaming ? (
+                  <Pressable
+                    style={[styles.button, canAsk ? styles.buttonPrimary : styles.buttonDisabled]}
+                    onPress={onSubmit}
+                    disabled={!canAsk}
+                  >
+                    <Text style={styles.buttonText}>Ask</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable style={[styles.button, styles.buttonDanger]} onPress={stop}>
+                    <Text style={styles.buttonText}>Stop</Text>
+                  </Pressable>
+                )}
+                <Pressable style={[styles.button, styles.buttonGhost]} onPress={reset} disabled={isStreaming}>
+                  <Text style={[styles.buttonGhostText]}>Clear</Text>
+                </Pressable>
               </View>
-            )}
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </LinearGradient>
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+            </View>
+
+            <ScrollView
+              ref={scrollRef}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+              onContentSizeChange={() => {
+                if (isStreaming) scrollRef.current?.scrollToEnd({ animated: true });
+              }}
+            >
+              {/* Live search steps (bonus) */}
+              <SearchSteps steps={search.steps} progress={search.progress} visible={search.steps.length > 0} />
+
+              {/* Show the asked question */}
+              {question.trim() ? (
+                <View style={styles.qaBlock}>
+                  <View style={styles.questionBubble}>
+                    <Text style={styles.qLabel}>You</Text>
+                    <Text style={styles.qText}>{question}</Text>
+                  </View>
+
+                  {/* Answer container */}
+                  <Collapsible
+                    title="Answer"
+                    defaultOpen
+                    rightAccessory={isStreaming ? <ActivityIndicator size="small" color="#2563eb" /> : null}
+                  >
+                    {sections
+                      .filter((s) => s.tagName?.toLowerCase() !== "think") // hide internal reasoning
+                      .map((section) => (
+                        <Collapsible key={section.id} title={section.title} defaultOpen>
+                          <MarkdownView>{section.content}</MarkdownView>
+                        </Collapsible>
+                      ))}
+                  </Collapsible>
+                </View>
+              ) : (
+                <View style={styles.hint}>
+                  <Text style={styles.hintText}>Ask a clinical question to start streaming an AI response.</Text>
+                </View>
+              )}
+
+              {/* On-screen debug log for easy diagnostics */}
+              {debug.length > 0 && (
+                <Collapsible title="Debug log" defaultOpen={false}>
+                  <Text
+                    style={{
+                      color: "#475569",
+                      fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+                      fontSize: 12,
+                    }}
+                  >
+                    {debug.join("\n")}
+                  </Text>
+                </Collapsible>
+              )}
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </LinearGradient>
+    </SafeAreaProvider>
   );
 }
 
@@ -130,7 +165,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
-  actions: { flexDirection: "row", gap: 10, marginTop: 12 },
+  actions: { flexDirection: "row", gap: 10, marginTop: 12, flexWrap: "wrap" },
   button: { paddingVertical: 11, paddingHorizontal: 18, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   buttonPrimary: { backgroundColor: "#2563eb" },
   buttonDisabled: { backgroundColor: "#93c5fd" },
@@ -141,4 +176,15 @@ const styles = StyleSheet.create({
   error: { color: "#dc2626", marginTop: 8 },
   hint: { alignItems: "center", paddingVertical: 24 },
   hintText: { color: "#64748b", textAlign: "center" },
+  qaBlock: { marginTop: 6 },
+  questionBubble: {
+    backgroundColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+  },
+  qLabel: { fontSize: 12, fontWeight: "700", color: "#334155", marginBottom: 4 },
+  qText: { color: "#0f172a", fontSize: 15, lineHeight: 20 },
 });

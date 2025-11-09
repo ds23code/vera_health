@@ -3,31 +3,16 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-export type Step = {
-  text: string;
-  isActive?: boolean;
-  isCompleted?: boolean;
-  extraInfo?: string;
-};
+export type Step = { text: string; isActive?: boolean; isCompleted?: boolean; extraInfo?: string };
 
-type Props = {
-  steps: Step[];
-  progress?: number;
-  visible?: boolean;
-};
-
-export default function SearchSteps({ steps, progress, visible = true }: Props) {
+export default function SearchSteps({ steps, progress, visible = true }: { steps: Step[]; progress?: number; visible?: boolean }) {
   if (!visible || steps.length === 0) return null;
-
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Search progress</Text>
-        {typeof progress === "number" ? (
-          <Text style={styles.progressText}>{Math.round(progress)}%</Text>
-        ) : null}
+        {typeof progress === "number" ? <Text style={styles.progressText}>{Math.round(progress)}%</Text> : null}
       </View>
-
       <View style={styles.steps}>
         {steps.map((s, idx) => {
           const iconName = s.isCompleted ? "checkmark-circle" : s.isActive ? "ellipse-outline" : "ellipse";
@@ -56,37 +41,12 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  title: {
-    fontWeight: "600",
-    color: "#0f172a",
-  },
-  progressText: {
-    fontSize: 12,
-    color: "#334155",
-  },
-  steps: {
-    gap: 6,
-  },
-  stepRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  stepText: {
-    color: "#0f172a",
-  },
-  active: {
-    color: "#2563eb",
-    fontWeight: "600",
-  },
-  extra: {
-    fontSize: 12,
-    color: "#64748b",
-    marginTop: 2,
-  },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  title: { fontWeight: "600", color: "#0f172a" },
+  progressText: { fontSize: 12, color: "#334155" },
+  steps: { gap: 6 },
+  stepRow: { flexDirection: "row", alignItems: "flex-start" },
+  stepText: { color: "#0f172a" },
+  active: { color: "#2563eb", fontWeight: "600" },
+  extra: { fontSize: 12, color: "#64748b", marginTop: 2 },
 });

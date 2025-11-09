@@ -8,7 +8,12 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-type Props = { title: string; children: React.ReactNode; defaultOpen?: boolean; rightAccessory?: React.ReactNode };
+type Props = {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  rightAccessory?: React.ReactNode;
+};
 
 export default function Collapsible({ title, children, defaultOpen = true, rightAccessory }: Props) {
   const [open, setOpen] = useState(defaultOpen);

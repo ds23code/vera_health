@@ -1,9 +1,26 @@
 // utils/parseTaggedContent.ts
-export type Section = { id: string; type: "general" | "tag"; title: string; tagName?: string; content: string };
-export type TaggedStreamParser = { append: (chunk: string) => void; getSections: () => Section[]; reset: () => void };
+export type Section = {
+  id: string;
+  type: "general" | "tag";
+  title: string;
+  tagName?: string;
+  content: string;
+};
 
-const FriendlyTitles: Record<string, string> = { guideline: "Guideline", drug: "Drug" };
-const titleize = (t: string) => FriendlyTitles[t] ?? t.charAt(0).toUpperCase() + t.slice(1);
+export type TaggedStreamParser = {
+  append: (chunk: string) => void;
+  getSections: () => Section[];
+  reset: () => void;
+};
+
+const FriendlyTitles: Record<string, string> = {
+  guideline: "Guideline",
+  drug: "Drug",
+  think: "Thinking",
+};
+
+const titleize = (t: string) =>
+  FriendlyTitles[t] ?? t.charAt(0).toUpperCase() + t.slice(1);
 
 export function createTaggedStreamParser(onUpdate: (s: Section[]) => void): TaggedStreamParser {
   let sections: Section[] = [{ id: "general", type: "general", title: "General", content: "" }];
@@ -12,16 +29,31 @@ export function createTaggedStreamParser(onUpdate: (s: Section[]) => void): Tagg
   let currentId: string | null = null;
 
   const update = () => onUpdate([...sections]);
-  const ensureGeneral = () => { if (!sections.find(s => s.id === "general")) sections.unshift({ id: "general", type: "general", title: "General", content: "" }); };
+  const ensureGeneral = () => {
+    if (!sections.find(s => s.id === "general")) {
+      sections.unshift({ id: "general", type: "general", title: "General", content: "" });
+    }
+  };
+
   const startTag = (name: string) => {
     currentTag = name;
     currentId = `tag-${sections.filter(s => s.type === "tag").length + 1}-${name}`;
     sections.push({ id: currentId, type: "tag", tagName: name, title: titleize(name), content: "" });
   };
+
   const endTag = () => { currentTag = null; currentId = null; };
 
-  const appendGeneral = (t: string) => { ensureGeneral(); const g = sections.find(s => s.id === "general")!; g.content += t; };
-  const appendTag = (t: string) => { if (!currentId) return; const s = sections.find(s => s.id === currentId); if (s) s.content += t; };
+  const appendGeneral = (t: string) => {
+    ensureGeneral();
+    const g = sections.find(s => s.id === "general")!;
+    g.content += t;
+  };
+
+  const appendTag = (t: string) => {
+    if (!currentId) return;
+    const s = sections.find(s => s.id === currentId);
+    if (s) s.content += t;
+  };
 
   const process = () => {
     let i = 0;
@@ -52,6 +84,9 @@ export function createTaggedStreamParser(onUpdate: (s: Section[]) => void): Tagg
   return {
     append: (chunk: string) => { if (!chunk) return; buffer += chunk; process(); },
     getSections: () => sections,
-    reset: () => { sections = [{ id: "general", type: "general", title: "General", content: "" }]; buffer = ""; currentTag = null; currentId = null; update(); },
+    reset: () => {
+      sections = [{ id: "general", type: "general", title: "General", content: "" }];
+      buffer = ""; currentTag = null; currentId = null; update();
+    },
   };
 }
